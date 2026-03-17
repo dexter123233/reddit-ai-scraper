@@ -139,17 +139,18 @@
             if (!posts.length) { document.getElementById('results').innerHTML = '<p>No results</p>'; return; }
             document.getElementById('results').innerHTML = posts.map(p => {
                 const ai = p.ai_analysis || {};
+                const intent = p.intent || 'low';
                 const monetization = ai.monetization || ai.MONETIZATION_SCORE || '?';
                 const frustration = ai.frustration || ai.CORE_FRUSTRATION || '';
                 const workaround = ai.workaround || ai.CURRENT_WORKAROUND || '';
                 const opportunity = ai.opportunity || ai.SOFTWARE_OPPORTUNITY || '';
                 return `
-                <div class="result-item ${p.intent}">
-                    <div class="result-title">${p.title}</div>
+                <div class="result-item ${intent}">
+                    <div class="result-title">${p.title || 'Untitled'}</div>
                     <div class="result-meta">
-                        <span class="badge ${p.intent}">${p.intent.toUpperCase()}</span>
-                        <span>r/${p.subreddit}</span>
-                        <span>${p.score} pts</span>
+                        <span class="badge ${intent}">${intent.toUpperCase()}</span>
+                        <span>r/${p.subreddit || 'unknown'}</span>
+                        <span>${p.score || 0} pts</span>
                         ${frustration ? `<span class="ai-score">💰 ${monetization}/10</span>` : ''}
                     </div>
                     ${frustration ? `
@@ -159,7 +160,7 @@
                         <p><strong>Workaround:</strong> ${workaround}</p>
                         <p><strong>Solution:</strong> ${opportunity}</p>
                     </div>` : ''}
-                    <div class="result-meta" style="margin-top:8px"><a href="${p.url}" target="_blank" style="color:#58a6ff">View on Reddit</a></div>
+                    <div class="result-meta" style="margin-top:8px"><a href="${p.url || '#'}" target="_blank" style="color:#58a6ff">View on Reddit</a></div>
                 </div>`;
             }).join('');
         }
