@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reddit AI Scraper - Pain Point Radar</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
+        .header { background: linear-gradient(135deg, #1a1f2e 0%, #0d1117 100%); padding: 20px 30px; border-bottom: 1px solid #30363d; }
+        .header h1 { color: #58a6ff; font-size: 24px; display: flex; align-items: center; gap: 10px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; margin-bottom: 5px; color: #8b949e; }
+        input, select { width: 100%; padding: 10px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-size: 14px; }
+        input:focus, select:focus { outline: none; border-color: #58a6ff; }
+        button { padding: 10px 20px; background: #238636; border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 14px; margin-right: 10px; }
+        button:hover { background: #2ea043; }
+        button.secondary { background: #30363d; }
+        button.secondary:hover { background: #484f58; }
+        button.ai { background: #8250df; }
+        button.ai:hover { background: #9966ff; }
+        .tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+        .tag { padding: 5px 12px; background: #21262d; border: 1px solid #30363d; border-radius: 20px; font-size: 12px; cursor: pointer; }
+        .tag:hover { border-color: #58a6ff; }
+        .checkbox-group { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .checkbox-group input { width: auto; }
+        .results { margin-top: 20px; }
+        .result-item { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 15px; margin-bottom: 10px; }
+        .result-item.high { border-left: 3px solid #f85149; }
+        .result-title { color: #58a6ff; margin-bottom: 8px; font-size: 15px; }
+        .result-meta { font-size: 12px; color: #8b949e; }
+        .result-meta span { margin-right: 15px; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .badge.high { background: #f8514922; color: #f85149; }
+        .ai-analysis { background: #8250df22; border: 1px solid #8250df; border-radius: 6px; padding: 12px; margin-top: 10px; }
+        .ai-analysis h4 { color: #9966ff; font-size: 12px; margin-bottom: 8px; }
+        .ai-score { display: inline-block; background: #8250df; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; margin-left: 10px; }
+        .status { padding: 10px; border-radius: 6px; margin-bottom: 15px; }
+        .status.error { background: #f8514922; color: #f85149; }
+        .status.success { background: #23863622; color: #3fb950; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab { padding: 10px 20px; background: transparent; border: 1px solid #30363d; border-radius: 6px; color: #8b949e; cursor: pointer; }
+        .tab.active { background: #58a6ff; color: #0d1117; border-color: #58a6ff; }
+        .loader { border: 2px solid #30363d; border-top: 2px solid #58a6ff; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 Reddit AI Scraper - Pain Point Radar</h1>
+    </div>
+    <div class="container">
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('scan')">Scan</button>
+            <button class="tab" onclick="showTab('config')">Config</button>
+            <button class="tab" onclick="showTab('results')">Results</button>
+        </div>
+        <div id="scan-tab">
+            <div class="card">
+                <h3>Subreddits</h3>
+                <div class="input-group">
+                    <input type="text" id="subreddits" value="shopify,notion,smallbusiness,saas,startups,n8n">
+                    <div class="tags">
+                        <span class="tag" onclick="setSubs('shopify,smallbusiness,notion,saas,startups')">Business</span>
+                        <span class="tag" onclick="setSubs('webdev,python,javascript,reactjs,aws')">Tech</span>
+                        <span class="tag" onclick="setSubs('shopify,shopifyapps,dropshipping')">E-commerce</span>
+                        <span class="tag" onclick="setSubs('n8n,zapier,airtable,notion')">Productivity</span>
+                        <span class="tag" onclick="setSubs('indiehackers,bootstrapped,freelance')">Indie</span>
+                    </div>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="use_ai">
+                    <label for="use_ai">🧠 Enable AI Analysis (extracts problem, workaround, monetization score)</label>
+                </div>
+                <button onclick="runScan()">🔍 Scan</button>
+                <button class="ai" onclick="runScan(true)">🧠 Scan + AI Analysis</button>
+                <button class="secondary" onclick="exportCSV()">📄 Export CSV</button>
+            </div>
+            <div id="status"></div>
+            <div class="results" id="results"></div>
+        </div>
+        <div id="config-tab" style="display:none">
+            <div class="card">
+                <h3>API Keys</h3>
+                <div class="grid">
+                    <div class="input-group"><label>OpenRouter API Key</label><input type="password" id="openrouter_key" placeholder="sk-..."></div>
+                    <div class="input-group"><label>Firecrawl API Key</label><input type="password" id="firecrawl_key" placeholder="fc-..."></div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Webhooks</h3>
+                <div class="grid">
+                    <div class="input-group"><label>Discord Webhook</label><input type="text" id="discord_webhook"></div>
+                    <div class="input-group"><label>Slack Webhook</label><input type="text" id="slack_webhook"></div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Notion</h3>
+                <div class="grid">
+                    <div class="input-group"><label>Notion Token</label><input type="password" id="notion_token"></div>
+                    <div class="input-group"><label>Database ID</label><input type="text" id="notion_db_id"></div>
+                </div>
+            </div>
+            <button onclick="saveConfig()">💾 Save Config</button>
+        </div>
+        <div id="results-tab" style="display:none">
+            <div class="card"><h3>Scan History</h3><div id="history"></div></div>
+        </div>
+    </div>
+    <script>
+        const API = 'http://localhost:8080';
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('[id$="-tab"]').forEach(t => t.style.display = 'none');
+            event.target.classList.add('active');
+            document.getElementById(tab + '-tab').style.display = 'block';
+            if (tab === 'results') loadHistory();
+        }
+        function setSubs(subs) { document.getElementById('subreddits').value = subs; }
+        function showStatus(msg, type='success') { document.getElementById('status').innerHTML = `<div class="status ${type}">${msg}</div>`; }
+        async function runScan(forceAI = false) {
+            const useAI = forceAI || document.getElementById('use_ai').checked;
+            const subs = document.getElementById('subreddits').value.split(',').map(s => s.trim()).filter(s => s);
+            if (!subs.length) return showStatus('Enter subreddits', 'error');
+            showStatus(useAI ? '<div class="loader"></div> Scanning + AI Analysis...' : '<div class="loader"></div> Scanning...', 'success');
+            try {
+                const res = await fetch(API + '/scan', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({subreddits: subs, ai_analyze: useAI})});
+                const data = await res.json();
+                showStatus(`✓ Found ${data.high_intent} high, ${data.medium_intent} medium intent posts${data.ai_analyzed ? ' (AI Analyzed)' : ''}`);
+                displayResults(data.high || []);
+            } catch(e) { showStatus('Error: ' + e.message, 'error'); }
+        }
+        function displayResults(posts) {
+            if (!posts.length) { document.getElementById('results').innerHTML = '<p>No results</p>'; return; }
+            document.getElementById('results').innerHTML = posts.map(p => {
+                const ai = p.ai_analysis || {};
+                const monetization = ai.monetization || ai.MONETIZATION_SCORE || '?';
+                const frustration = ai.frustration || ai.CORE_FRUSTRATION || '';
+                const workaround = ai.workaround || ai.CURRENT_WORKAROUND || '';
+                const opportunity = ai.opportunity || ai.SOFTWARE_OPPORTUNITY || '';
+                return `
+                <div class="result-item ${p.intent}">
+                    <div class="result-title">${p.title}</div>
+                    <div class="result-meta">
+                        <span class="badge ${p.intent}">${p.intent.toUpperCase()}</span>
+                        <span>r/${p.subreddit}</span>
+                        <span>${p.score} pts</span>
+                        ${frustration ? `<span class="ai-score">💰 ${monetization}/10</span>` : ''}
+                    </div>
+                    ${frustration ? `
+                    <div class="ai-analysis">
+                        <h4>🧠 AI Analysis</h4>
+                        <p><strong>Problem:</strong> ${frustration}</p>
+                        <p><strong>Workaround:</strong> ${workaround}</p>
+                        <p><strong>Solution:</strong> ${opportunity}</p>
+                    </div>` : ''}
+                    <div class="result-meta" style="margin-top:8px"><a href="${p.url}" target="_blank" style="color:#58a6ff">View on Reddit</a></div>
+                </div>`;
+            }).join('');
+        }
+        async function saveConfig() {
+            const config = {openrouter_api_key: document.getElementById('openrouter_key').value, firecrawl_api_key: document.getElementById('firecrawl_key').value, discord_webhook: document.getElementById('discord_webhook').value, slack_webhook: document.getElementById('slack_webhook').value, notion_token: document.getElementById('notion_token').value, notion_db_id: document.getElementById('notion_db_id').value};
+            try { await fetch(API + '/config', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(config)}); showStatus('✓ Config saved', 'success'); } catch(e) { showStatus('Error: ' + e.message, 'error'); }
+        }
+        async function exportCSV() {
+            const res = await fetch(API + '/scan', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({subreddits: ['shopify']})});
+            const data = await res.json();
+            if (!data.high || !data.high.length) return showStatus('No results', 'error');
+            const csv = 'title,subreddit,url,score,intent,monetization,problem,workaround\n' + data.high.map(p => {
+                const ai = p.ai_analysis || {};
+                return `"${p.title}","${p.subreddit}","${p.url}",${p.score},"${p.intent}","${ai.monetization || ''}","${(ai.frustration || '').replace(/"/g,'""')}","${(ai.workaround || '').replace(/"/g,'""')}"`;
+            }).join('\n');
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'})); a.download = 'reddit-ideas.csv'; a.click();
+        }
+        async function loadHistory() {
+            try { const res = await fetch(API + '/results'); const data = await res.json(); document.getElementById('history').innerHTML = data.map(r => `<div class="result-item"><strong>${r.file}</strong>: ${r.total} posts (${r.high} high, AI:${r.ai_analyzed})</div>`).join('') || '<p>No history</p>'; } catch(e) { document.getElementById('history').innerHTML = '<p>Start server first</p>'; }
+        }
+    </script>
+</body>
+</html>

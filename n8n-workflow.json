@@ -1,0 +1,183 @@
+{
+  "name": "Reddit Pain Point Scanner",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 4
+            }
+          ]
+        }
+      },
+      "id": "schedule",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://www.reddit.com/r/{{$json.subreddit}}/rising.json",
+        "options": {
+          "timeout": 10000
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "reddit_fetch",
+      "name": "Fetch Reddit Posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [450, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1",
+          "name": "Reddit API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Filter for high-intent posts\nconst HIGH_INTENT = [\n  \"is there a tool\", \"looking for a tool\", \"need a tool\",\n  \"how do i automate\", \"tired of\", \"sick of\", \"manually\",\n  \"tedious\", \"repetitive\", \"using spreadsheet for\"\n];\n\nconst items = $input.all();\nconst filtered = [];\n\nfor (const item of items) {\n  const post = item.json.data || item.json;\n  const title = (post.title || \"\").toLowerCase();\n  const body = (post.selftext || \"\").toLowerCase();\n  const content = title + \" \" + body;\n  \n  if (HIGH_INTENT.some(kw => content.includes(kw))) {\n    filtered.push({\n      json: {\n        id: post.id,\n        title: post.title,\n        body: post.selftext,\n        subreddit: post.subreddit,\n        url: \"https://reddit.com\" + post.permalink,\n        score: post.score\n      }\n    });\n  }\n}\n\nreturn filtered;"
+      },
+      "id": "filter",
+      "name": "Filter High Intent",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.0-flash-001",
+        "messages": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a product researcher. Analyze Reddit posts for software business opportunities.\n\nExtract in JSON format:\n1. frustration: The core problem (1-2 sentences)\n2. workaround: Current bad solution\n3. monetization: 1-10 score\n4. opportunity: Type of software needed\n5. target_user: Who has this problem"
+            },
+            {
+              "role": "user",
+              "content": "Title: {{$json.title}}\nBody: {{$json.body}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "ai_analyze",
+      "name": "AI Pain Point Analysis",
+      "type": "ai-llm",
+      "typeVersion": 1,
+      "position": [850, 300],
+      "credentials": {
+        "openRouterApi": {
+          "id": "2",
+          "name": "OpenRouter"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "webhookUri": "={{$json.webhook}}",
+        "blocks": [
+          {
+            "type": "header",
+            "text": {
+              "type": "plain_text",
+              "text": "🔥 New Software Opportunities!"
+            }
+          },
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": "Found *{{$json.count}}* pain points from Reddit"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*_{{$json.title}}_*\n💰 Score: {{$json.monetization}}/10\n{{$json.url}}"
+            }
+          }
+        ]
+      },
+      "id": "slack",
+      "name": "Send to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 3,
+      "position": [1050, 300],
+      "credentials": {
+        "slackApi": {
+          "id": "3",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.notion.com/v1/pages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "body": {
+          "parent": { "database_id": "={{$json.dbId}}" },
+          "properties": {
+            "Name": { "title": [{ "text": { "content": "={{$json.title}}" }}] },
+            "Subreddit": { "rich_text": [{ "text": { "content": "={{$json.subreddit}}" }}] },
+            "URL": { "url": "={{$json.url}}" },
+            "Score": { "number": "={{$json.score}}" },
+            "Problem": { "rich_text": [{ "text": { "content": "={{$json.frustration}}" }}] },
+            "Monetization": { "number": "={{$json.monetization}}" }
+          }
+        }
+      },
+      "id": "notion",
+      "name": "Save to Notion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1050, 450],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "4",
+          "name": "Notion API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [[{"node": "Fetch Reddit Posts", "type": "main", "index": 0}]]
+    },
+    "Fetch Reddit Posts": {
+      "main": [[{"node": "Filter High Intent", "type": "main", "index": 0}]]
+    },
+    "Filter High Intent": {
+      "main": [
+        [{"node": "AI Pain Point Analysis", "type": "main", "index": 0}]
+      ]
+    },
+    "AI Pain Point Analysis": {
+      "main": [
+        [{"node": "Send to Slack", "type": "main", "index": 0}],
+        [{"node": "Save to Notion", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-03-17T00:00:00.000Z",
+  "versionId": "1"
+}
