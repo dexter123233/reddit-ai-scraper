@@ -111,7 +111,9 @@
         </div>
     </div>
     <script>
-        const API = 'http://localhost:8080';
+        // Auto-detect port from URL or default to 8080
+        const API_PORT = window.location.port || 8080;
+        const API = `http://localhost:${API_PORT}`;
         function showTab(tab) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('[id$="-tab"]').forEach(t => t.style.display = 'none');

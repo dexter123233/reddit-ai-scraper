@@ -331,10 +331,14 @@ class Handler(BaseHTTPRequestHandler):
         
         if path == "/":
             if HTML_FILE.exists():
+                html = HTML_FILE.read_text()
+                # Inject port dynamically
+                port = self.server.server_address[1]
+                html = html.replace("API_PORT = window.location.port || 8080", f"API_PORT = {port}")
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html")
                 self.end_headers()
-                self.wfile.write(HTML_FILE.read_text().encode())
+                self.wfile.write(html.encode())
             else:
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
