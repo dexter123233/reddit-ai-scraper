@@ -452,10 +452,21 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def run_server(port=8080):
-    print(f"Reddit AI Scraper v2.0 - http://localhost:{port}")
-    print("Enhanced with AI Pain Point Analysis")
-    print("Open browser to use GUI")
-    HTTPServer(("0.0.0.0", port), Handler).serve_forever()
+    """Run server, auto-find available port if in use"""
+    import socket
+    
+    # Try the requested port, then find next available
+    for try_port in range(port, port + 10):
+        try:
+            server = HTTPServer(("0.0.0.0", try_port), Handler)
+            print(f"Reddit AI Scraper v2.0 - http://localhost:{try_port}")
+            print("Enhanced with AI Pain Point Analysis")
+            print("Open browser to use GUI")
+            server.serve_forever()
+            break
+        except OSError:
+            print(f"Port {try_port} in use, trying {try_port + 1}...")
+            continue
 
 
 if __name__ == "__main__":
