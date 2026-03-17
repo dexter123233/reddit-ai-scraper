@@ -132,35 +132,39 @@
                 const res = await fetch(API + '/scan', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({subreddits: subs, ai_analyze: useAI})});
                 const data = await res.json();
                 showStatus(`✓ Found ${data.high_intent} high, ${data.medium_intent} medium intent posts${data.ai_analyzed ? ' (AI Analyzed)' : ''}`);
-                displayResults(data.high || []);
+                // Show all results on same page
+                const allPosts = [...(data.high || []), ...(data.medium || [])];
+                displayResults(allPosts);
             } catch(e) { showStatus('Error: ' + e.message, 'error'); }
         }
         function displayResults(posts) {
-            if (!posts.length) { document.getElementById('results').innerHTML = '<p>No results</p>'; return; }
-            document.getElementById('results').innerHTML = posts.map(p => {
+            if (!posts.length) { document.getElementById('results').innerHTML = '<p>No results found. Try different subreddits.</p>'; return; }
+            document.getElementById('results').innerHTML = `<h3 style="margin-bottom:15px">📋 Results (${posts.length} posts)</h3>` + posts.map(p => {
                 const ai = p.ai_analysis || {};
                 const intent = p.intent || 'low';
                 const monetization = ai.monetization || ai.MONETIZATION_SCORE || '?';
                 const frustration = ai.frustration || ai.CORE_FRUSTRATION || '';
                 const workaround = ai.workaround || ai.CURRENT_WORKAROUND || '';
                 const opportunity = ai.opportunity || ai.SOFTWARE_OPPORTUNITY || '';
+                const intentColor = intent === 'high' ? '#f85149' : intent === 'medium' ? '#d29922' : '#8b949e';
                 return `
-                <div class="result-item ${intent}">
+                <div class="result-item" style="border-left: 4px solid ${intentColor}">
                     <div class="result-title">${p.title || 'Untitled'}</div>
                     <div class="result-meta">
-                        <span class="badge ${intent}">${intent.toUpperCase()}</span>
-                        <span>r/${p.subreddit || 'unknown'}</span>
-                        <span>${p.score || 0} pts</span>
-                        ${frustration ? `<span class="ai-score">💰 ${monetization}/10</span>` : ''}
+                        <span class="badge" style="background:${intentColor}22;color:${intentColor}">${intent.toUpperCase()}</span>
+                        <span>📁 r/${p.subreddit || 'unknown'}</span>
+                        <span>⬆️ ${p.score || 0}</span>
+                        <span>💬 ${p.comments || 0}</span>
+                        ${frustration ? `<span class="ai-score">💰 Score: ${monetization}/10</span>` : ''}
                     </div>
                     ${frustration ? `
                     <div class="ai-analysis">
                         <h4>🧠 AI Analysis</h4>
-                        <p><strong>Problem:</strong> ${frustration}</p>
-                        <p><strong>Workaround:</strong> ${workaround}</p>
-                        <p><strong>Solution:</strong> ${opportunity}</p>
+                        <p><strong>❌ Problem:</strong> ${frustration}</p>
+                        <p><strong>🔧 Current:</strong> ${workaround}</p>
+                        <p><strong>💡 Solution:</strong> ${opportunity}</p>
                     </div>` : ''}
-                    <div class="result-meta" style="margin-top:8px"><a href="${p.url || '#'}" target="_blank" style="color:#58a6ff">View on Reddit</a></div>
+                    <div class="result-meta" style="margin-top:8px"><a href="${p.url || '#'}" target="_blank" style="color:#58a6ff">🔗 View on Reddit</a></div>
                 </div>`;
             }).join('');
         }
