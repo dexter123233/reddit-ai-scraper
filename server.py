@@ -403,13 +403,20 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(result).encode())
         
         elif path == "/config":
-            config = load_config()
-            config.update(data)
-            save_config(config)
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({"status": "ok"}).encode())
+            if self.command == "GET":
+                config = load_config()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps(config).encode())
+            else:
+                config = load_config()
+                config.update(data)
+                save_config(config)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "ok"}).encode())
         
         elif path == "/firecrawl":
             url = data.get("url")

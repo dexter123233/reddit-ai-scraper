@@ -120,6 +120,7 @@
             event.target.classList.add('active');
             document.getElementById(tab + '-tab').style.display = 'block';
             if (tab === 'results') loadHistory();
+            if (tab === 'config') loadConfig();
         }
         function setSubs(subs) { document.getElementById('subreddits').value = subs; }
         function showStatus(msg, type='success') { document.getElementById('status').innerHTML = `<div class="status ${type}">${msg}</div>`; }
@@ -171,6 +172,9 @@
         async function saveConfig() {
             const config = {openrouter_api_key: document.getElementById('openrouter_key').value, firecrawl_api_key: document.getElementById('firecrawl_key').value, discord_webhook: document.getElementById('discord_webhook').value, slack_webhook: document.getElementById('slack_webhook').value, notion_token: document.getElementById('notion_token').value, notion_db_id: document.getElementById('notion_db_id').value};
             try { await fetch(API + '/config', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(config)}); showStatus('✓ Config saved', 'success'); } catch(e) { showStatus('Error: ' + e.message, 'error'); }
+        }
+        async function loadConfig() {
+            try { const res = await fetch(API + '/config'); const config = await res.json(); document.getElementById('openrouter_key').value = config.openrouter_api_key || ''; document.getElementById('firecrawl_key').value = config.firecrawl_api_key || ''; document.getElementById('discord_webhook').value = config.discord_webhook || ''; document.getElementById('slack_webhook').value = config.slack_webhook || ''; document.getElementById('notion_token').value = config.notion_token || ''; document.getElementById('notion_db_id').value = config.notion_db_id || ''; } catch(e) { console.log('Could not load config'); }
         }
         async function exportCSV() {
             const res = await fetch(API + '/scan', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({subreddits: ['shopify']})});
